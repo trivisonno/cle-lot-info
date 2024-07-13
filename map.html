@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaflet Map with ArcGIS Query</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 600px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://unpkg.com/esri-leaflet"></script>
+
+    <script>
+        // Initialize the map
+        var map = L.map('map').setView([41.48453403320894,-81.7090129852295], 13);
+
+        // Add a tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Add click event listener
+        map.on('click', function(e) {
+            var latlng = e.latlng;
+            var lat = latlng.lat;
+            var lng = latlng.lng;
+
+            queryArcGISAPIs(lat, lng);
+        });
+
+        function queryArcGISAPIs(lat, lng) {
+            var api1 = `https://services3.arcgis.com/dty2kHktVXHrqO8i/arcgis/rest/services/CommDev_CDC2020/FeatureServer/0/query?geometry=${lng},${lat}&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&resultType=standard&distance=0.0&units=esriSRUnit_Meter&relationParam=&returnGeodetic=false&outFields=&returnGeometry=false&returnCentroid=false&returnEnvelope=false&featureEncoding=esriDefault&multipatchOption=none&maxAllowableOffset=&geometryPrecision=&outSR=4326&defaultSR=&datumTransformation=&applyVCSProjection=false&returnIdsOnly=false&returnUniqueIdsOnly=false&returnCountOnly=false&returnExtentOnly=false&returnQueryGeometry=false&returnDistinctValues=false&cacheHint=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&having=&resultOffset=&resultRecordCount=&returnZ=false&returnM=false&returnTrueCurves=false&returnExceededLimitFeatures=true&quantizationParameters=&sqlFormat=none&f=pjson&token=`;
+            var api2 = `https://services3.arcgis.com/dty2kHktVXHrqO8i/arcgis/rest/services/ward_characteristics/FeatureServer/0/query?geometry=${lng},${lat}&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&resultType=standard&distance=0.0&units=esriSRUnit_Meter&relationParam=&returnGeodetic=false&outFields=WARD_NAME%2CCOUNCILMEMBER%2CEMAIL&returnGeometry=false&returnCentroid=false&returnEnvelope=false&featureEncoding=esriDefault&multipatchOption=none&maxAllowableOffset=&geometryPrecision=&outSR=4326&defaultSR=&datumTransformation=&applyVCSProjection=false&returnIdsOnly=false&returnUniqueIdsOnly=false&returnCountOnly=false&returnExtentOnly=false&returnQueryGeometry=false&returnDistinctValues=false&cacheHint=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&having=&resultOffset=&resultRecordCount=&returnZ=false&returnM=false&returnTrueCurves=false&returnExceededLimitFeatures=true&quantizationParameters=&sqlFormat=none&f=pjson&token=`;
+            var api3 = `https://www.clevelandgis.org/arcgis/rest/services/AGOServices/PlanningWAB/MapServer/103/query?geometry=${lng},${lat}&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&inSR=4326&outFields=*&f=json&returnGeometry=false&spatialRel=esriSpatialRelIntersects&`;
+
+            $.when(
+                $.getJSON(api1),
+                $.getJSON(api2),
+                $.getJSON(api3)
+            ).done(function(data1, data2, data3) {
+                // Process the data from the APIs
+                displayResults(data1[0]['features'], data2[0]['features'][0]['attributes'], data3[0]['features'][0]['attributes'], lat, lng);
+            }).fail(function() {
+                alert("Error querying the APIs");
+            });
+        }
+
+        function displayResults(data1, data2, data3, lat, lng) {
+            console.log(lat, lng)
+            var newLatLng = new L.LatLng(lat, lng);
+            var content = '<h3>Query Results</h3>';
+
+            content += '<h4>Community Development Corp:</h4>';
+            for (let index = 0; index < data1.length; index++) {
+                content += data1[index]['attributes']['CDCNAME']+"<br>";
+                
+            }
+            
+
+            content += '<h4>Council contact:</h4>';
+            content += "Councilmember " + (data2['COUNCILMEMBER']) + " (" + data2['WARD_NAME'] + ")<br>" + (data2['EMAIL']);
+
+            content += '<h4>City Planner:</h4>';
+            content += data3['Planner'] + "<br>" + data3['PHONE'] + "<br>" + data3['EMAIL'];
+
+            L.popup()
+                .setLatLng(newLatLng)
+                .setContent(content)
+                .openOn(map);
+        }
+    </script>
+</body>
+</html>
